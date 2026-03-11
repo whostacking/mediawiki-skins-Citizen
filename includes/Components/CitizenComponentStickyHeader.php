@@ -24,7 +24,7 @@ class CitizenComponentStickyHeader implements CitizenComponent {
 	private const SUBJECT_ICON = [
 		'id' => 'ca-subject-sticky-header',
 		'clickTarget' => '#ca-subject > a',
-		'icon' => 'article'
+		'icon' => 'eye'
 	];
 
 	private const HISTORY_ICON = [
@@ -79,19 +79,18 @@ class CitizenComponentStickyHeader implements CitizenComponent {
 		$iconButtons = [];
 		foreach ( $icons as $icon ) {
 			$button = new CitizenComponentButton(
-				"",
-				$icon[ 'icon' ],
-				$icon[ 'id' ],
-				$icon[ 'class' ] ?? '',
-				[
+				icon: $icon['icon'],
+				id: $icon['id'],
+				// @phan-suppress-next-line PhanCoalescingAlwaysNullInLoop
+				class: $icon['class'] ?? '',
+				attributes: [
 					'tabindex' => '-1',
-					'data-mw-citizen-click-target' => $icon[ 'clickTarget' ] ?? null,
+					// @phan-suppress-next-line PhanCoalescingNeverNullInLoop
+					'data-mw-citizen-click-target' => $icon['clickTarget'] ?? null,
 				],
-				'quiet',
-				'default',
-				'large',
-				true,
-				null
+				weight: 'quiet',
+				size: 'large',
+				iconOnly: true,
 			);
 			$iconButtons[] = $button->getTemplateData();
 		}

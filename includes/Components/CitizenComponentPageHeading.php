@@ -10,7 +10,6 @@ use MediaWiki\Language\Language;
 use MediaWiki\Languages\LanguageConverterFactory;
 use MediaWiki\Output\OutputPage;
 use MediaWiki\Skin\SkinComponentUtils;
-use MediaWiki\StubObject\StubUserLang;
 use MediaWiki\Title\Title;
 use MediaWiki\User\User;
 use MediaWiki\User\UserFactory;
@@ -30,10 +29,9 @@ class CitizenComponentPageHeading implements CitizenComponent {
 		private readonly GenderCache $genderCache,
 		private readonly UserIdentityLookup $userIdentityLookup,
 		private readonly LanguageConverterFactory $languageConverterFactory,
-		private readonly Language $contentLanguage,
+		private readonly Language $lang,
 		private readonly MessageLocalizer $localizer,
 		private readonly OutputPage $out,
-		private readonly Language|StubUserLang $pageLang,
 		private readonly Title $title,
 		private readonly string $titleData
 	) {
@@ -94,12 +92,11 @@ class CitizenComponentPageHeading implements CitizenComponent {
 	 */
 	private function buildGenderTagline( User $user ): string {
 		$gender = $this->genderCache->getGenderOf( $user, __METHOD__ );
-		$msgGender = '';
-		if ( $gender === 'male' ) {
-			$msgGender = '♂';
-		} elseif ( $gender === 'female' ) {
-			$msgGender = '♀';
-		}
+		$msgGender = match ( $gender ) {
+			'male' => '♂',
+			'female' => '♀',
+			default => '',
+		};
 
 		if ( $msgGender ) {
 			return Html::rawElement(
@@ -128,7 +125,7 @@ class CitizenComponentPageHeading implements CitizenComponent {
 		$msgEditCount = $this->localizer->msg( 'usereditcount' )
 			->numParams( number_format( (float)$editCount, 0 ) )
 			->text();
-		$editCountHref = SkinComponentUtils::makeSpecialUrlSubpage( 'Contributions', $user );
+		$editCountHref = SkinComponentUtils::makeSpecialUrlSubpage( 'Contributions', $user->getName() );
 		$link = Html::element( 'a', [ 'href' => $editCountHref ], $msgEditCount );
 
 		return Html::rawElement(
@@ -160,7 +157,7 @@ class CitizenComponentPageHeading implements CitizenComponent {
 				'class' => 'citizen-user-regdate',
 				'datetime' => $regDateTs,
 			],
-			$this->pageLang->userDate( new MWTimestamp( $regDate ), $user )
+			$this->lang->userDate( new MWTimestamp( $regDate ), $user )
 		);
 
 		$msgRegDate = $this->localizer->msg( 'citizen-tagline-user-regdate', $regDateHtml )->parse();
@@ -216,9 +213,11 @@ class CitizenComponentPageHeading implements CitizenComponent {
 			return $this->buildUserTagline();
 		}
 
-		$nsMsgKey = 'citizen-tagline-ns-' . strtolower( $title->getNsText() );
-		if ( !$this->localizer->msg( $nsMsgKey )->isDisabled() ) {
-			return $this->localizer->msg( $nsMsgKey )->parse();
+		if ( $title->getNsText() ) {
+			$nsMsgKey = 'citizen-tagline-ns-' . strtolower( $title->getNsText() );
+			if ( !$this->localizer->msg( $nsMsgKey )->isDisabled() ) {
+				return $this->localizer->msg( $nsMsgKey )->parse();
+			}
 		}
 
 		return $this->getCitizenTagline( 'citizen-tagline' );
@@ -233,7 +232,7 @@ class CitizenComponentPageHeading implements CitizenComponent {
 			return false;
 		}
 
-		// @phan-suppress-next-line PhanTypeMismatchArgument
+		// @phan-suppress-next-line PhanTypeMismatchArgument NS constants from SocialProfile extension
 		if ( !$this->title->inNamespaces( [ NS_USER_WIKI, NS_USER_PROFILE ] ) ) {
 			return false;
 		}
@@ -264,7 +263,7 @@ class CitizenComponentPageHeading implements CitizenComponent {
 
 		if ( $tagline !== '' ) {
 			// Apply language variant conversion
-			$langConv = $this->languageConverterFactory->getLanguageConverter( $this->contentLanguage );
+			$langConv = $this->languageConverterFactory->getLanguageConverter( $this->lang );
 			$tagline = $langConv->convert( $tagline );
 		}
 
